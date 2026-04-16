@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Column Buckling Demo</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --line: #dbe4ee;
+      --blue: #2563eb;
+      --blue2: #1d4ed8;
+      --green: #059669;
+      --amber: #d97706;
+      --amberBg: #fef3c7;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    .card {
+      background: var(--panel);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      border: 1px solid #eef2f7;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 24px 24px 8px;
+    }
+    .card-body {
+      padding: 8px 24px 24px;
+    }
+    h1, h2, h3, p { margin: 0; }
+    h1, h2 { font-size: 28px; line-height: 1.15; }
+    .sub {
+      margin-top: 10px;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .control-group { margin-top: 18px; }
+    .label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .row2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    select, input[type="range"], button {
+      width: 100%;
+    }
+    select, button {
+      border-radius: 16px;
+      border: 1px solid #d9e2ec;
+      background: white;
+      color: var(--text);
+      font-size: 15px;
+      padding: 12px 14px;
+    }
+    input[type="range"] { accent-color: var(--blue); }
+    .softbox {
+      margin-top: 18px;
+      background: #fff;
+      border: 1px solid #e5edf5;
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .minihead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .tiny {
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 8px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .stat-dark, .stat-light {
+      border-radius: 22px;
+      padding: 16px;
+    }
+    .stat-dark {
+      background: #0f172a;
+      color: white;
+    }
+    .stat-light {
+      background: white;
+      border: 1px solid #e5edf5;
+    }
+    .caps {
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+    .big {
+      font-size: 34px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+    .state {
+      display: inline-block;
+      padding: 7px 12px;
+      border-radius: 999px;
+      color: white;
+      font-weight: 700;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .green { background: var(--green); }
+    .amber { background: var(--amber); }
+    .note {
+      margin-top: 18px;
+      border: 1px solid #e5edf5;
+      border-radius: var(--radius);
+      background: white;
+      padding: 16px;
+      line-height: 1.65;
+      color: #334155;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 18px;
+      cursor: pointer;
+      font-weight: 600;
+      background: #f8fafc;
+    }
+    button:hover { background: #f1f5f9; }
+    .viz-shell {
+      padding: 14px;
+      border: 1px solid #e5edf5;
+      border-radius: 28px;
+      background: radial-gradient(circle at top, #ffffff 0%, #f8fafc 58%, #eef2ff 100%);
+    }
+    svg {
+      width: 100%;
+      height: 760px;
+      display: block;
+      touch-action: none;
+      user-select: none;
+    }
+    .help {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #64748b;
+    }
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: 1fr; }
+      svg { height: 680px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="grid">
+      <section class="card">
+        <div class="card-header">
+          <h1>Interactive Euler Buckling Demo</h1>
+          <p class="sub">
+            Choose the upper and lower boundary conditions, then drag the load handle downward or use the slider.
+            When the compressive load reaches the critical load <strong>P<sub>cr</sub></strong>, the straight column buckles into its first mode shape.
+          </p>
+        </div>
+        <div class="card-body">
+          <div class="row2">
+            <div class="control-group" style="margin-top:0;">
+              <label class="label" for="topBC">Upper end</label>
+              <select id="topBC">
+                <option value="fixed">Fixed</option>
+                <option value="pinned">Pinned</option>
+                <option value="free">Free</option>
+              </select>
+            </div>
+            <div class="control-group" style="margin-top:0;">
+              <label class="label" for="bottomBC">Lower end</label>
+              <select id="bottomBC">
+                <option value="fixed">Fixed</option>
+                <option value="pinned">Pinned</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="softbox">
+            <div class="minihead">
+              <span>Load level</span>
+              <strong id="loadFactorLabel">0.16 × Pcr</strong>
+            </div>
+            <input id="loadSlider" type="range" min="0.02" max="1.25" step="0.01" value="0.16" />
+            <div class="tiny">You can use the slider or drag the load handle directly in the graphic.</div>
+          </div>
+
+          
+
+          <div class="stats">
+            <div class="stat-dark">
+              <div class="caps">Effective length factor</div>
+              <div class="big" id="kLabel">K = 0.5</div>
+              <div style="margin-top:8px; opacity:0.86;" id="leLabel">L<sub>e</sub> = 0.500 L</div>
+            </div>
+            <div class="stat-light">
+              <div class="caps" style="color:#64748b;">State</div>
+              <div id="stateBadge" class="state green">Straight / stable</div>
+              <div style="margin-top:12px; color:#475569; font-size:14px;" id="pLabel">P = 0.00, Pcr = 0.00</div>
+            </div>
+          </div>
+
+          <div class="note">
+            <strong>Teaching note.</strong>
+            This demo uses the Euler relation <strong>P<sub>cr</sub> = π²EI / (KL)²</strong> and draws a first-mode buckled shape that is visually consistent with the chosen end conditions.
+            It is designed for concept-building and classroom interaction rather than full nonlinear post-buckling analysis.
+          </div>
+
+          <button id="resetBtn">Reset demo</button>
+          <div class="help">Tip: for a quick classroom contrast, compare fixed–fixed, fixed–pinned, and pinned–pinned.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Column response</h2>
+        </div>
+        <div class="card-body">
+          <div class="viz-shell">
+            <svg id="svg" viewBox="0 0 520 720" aria-label="Interactive column buckling visualization">
+              <defs>
+                <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f172a"></path>
+                </marker>
+                <filter id="softGlow">
+                  <feGaussianBlur stdDeviation="3" result="blur"></feGaussianBlur>
+                  <feMerge>
+                    <feMergeNode in="blur"></feMergeNode>
+                    <feMergeNode in="SourceGraphic"></feMergeNode>
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <text x="26" y="38" font-size="18" font-weight="700" fill="#0f172a">Drag the load handle</text>
+              <text x="26" y="62" font-size="13" fill="#475569">Downward motion increases axial compression P</text>
+
+              <line id="axisLine" x1="110" y1="120" x2="110" y2="610" stroke="#e2e8f0" stroke-dasharray="8 8" stroke-width="3"></line>
+              <text x="84" y="652" font-size="13" fill="#64748b">Initial axis</text>
+
+              <g id="topSupport"></g>
+              <g id="bottomSupport"></g>
+
+              <path id="columnGlow" fill="none" stroke="#2563eb" stroke-width="12" stroke-linecap="round" filter="url(#softGlow)"></path>
+              <path id="columnPath" fill="none" stroke="#1d4ed8" stroke-width="5" stroke-linecap="round"></path>
+
+              <circle id="modeDot" cx="0" cy="0" r="0" fill="#f59e0b" opacity="0.92"></circle>
+              <text id="modeText" x="0" y="0" font-size="15" fill="#92400e" font-weight="700"></text>
+
+              <line id="loadArrow" x1="352" y1="150" x2="352" y2="136" stroke="#0f172a" stroke-width="5" marker-end="url(#arrowHead)"></line>
+              <text id="loadLetter" x="364" y="142" font-size="20" font-weight="700" fill="#0f172a">P</text>
+              <g id="dragHandle" style="cursor: ns-resize;">
+                <rect id="handleRect" x="318" y="132" width="68" height="36" rx="18" fill="#1e293b"></rect>
+                <text id="handleText" x="352" y="156" text-anchor="middle" font-size="13" font-weight="700" fill="white">drag</text>
+              </g>
+
+              <g>
+                <rect x="360" y="552" width="140" height="132" rx="20" fill="white" stroke="#e2e8f0"></rect>
+                <text x="374" y="580" font-size="15" font-weight="700" fill="#0f172a">Euler relation</text>
+                <text x="374" y="614" font-size="19" fill="#0f172a">Pcr = π²EI / (K L)²</text>
+                <text id="pairText" x="374" y="644" font-size="13" fill="#475569">Current pair: fixed–fixed</text>
+              </g>
+
+              <g>
+                <rect x="28" y="552" width="190" height="132" rx="20" fill="white" stroke="#e2e8f0"></rect>
+                <text x="46" y="580" font-size="16" font-weight="700" fill="#0f172a">Interpretation</text>
+                <text id="ratioText" x="46" y="612" font-size="14" fill="#475569">P / Pcr = 0.00</text>
+                <text id="lelText" x="46" y="638" font-size="14" fill="#475569">Le / L = 0.500</text>
+                <text id="ampText" x="46" y="664" font-size="14" fill="#475569">Mode amplitude = 0.0 px</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const LENGTH = 1.0;
+    const EI = 1.0;
+    const width = 520;
+    const centerX = width / 2;
+    const yTop = 120;
+    const yBottom = 610;
+    const straightHeight = yBottom - yTop;
+    const minY = yTop + 10;
+    const maxY = yTop + 200;
+
+    const K_FACTORS = {
+      'fixed-fixed': 0.5,
+      'fixed-pinned': 0.699,
+      'pinned-fixed': 0.699,
+      'pinned-pinned': 1.0,
+      'fixed-free': 2.0
+    };
+
+    const topBC = document.getElementById('topBC');
+    const bottomBC = document.getElementById('bottomBC');
+    const loadSlider = document.getElementById('loadSlider');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const loadFactorLabel = document.getElementById('loadFactorLabel');
+    const kLabel = document.getElementById('kLabel');
+    const leLabel = document.getElementById('leLabel');
+    const stateBadge = document.getElementById('stateBadge');
+    const pLabel = document.getElementById('pLabel');
+
+    const columnGlow = document.getElementById('columnGlow');
+    const columnPath = document.getElementById('columnPath');
+    const topSupport = document.getElementById('topSupport');
+    const bottomSupport = document.getElementById('bottomSupport');
+    const pairText = document.getElementById('pairText');
+    const ratioText = document.getElementById('ratioText');
+    const lelText = document.getElementById('lelText');
+    const ampText = document.getElementById('ampText');
+    const modeDot = document.getElementById('modeDot');
+    const modeText = document.getElementById('modeText');
+    const loadArrow = document.getElementById('loadArrow');
+    const loadLetter = document.getElementById('loadLetter');
+    const dragHandle = document.getElementById('dragHandle');
+    const handleRect = document.getElementById('handleRect');
+    const handleText = document.getElementById('handleText');
+    const svg = document.getElementById('svg');
+
+    let dragging = false;
+
+    function pcr(K) {
+      return (Math.PI * Math.PI * EI) / Math.pow(K * LENGTH, 2);
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function shapeValue(s, bottom, top) {
+      if (bottom === 'pinned' && top === 'pinned') {
+        return Math.sin(Math.PI * s);
+      }
+      if (bottom === 'fixed' && top === 'fixed') {
+        return 1 - Math.cos(2 * Math.PI * s);
+      }
+      if (bottom === 'fixed' && top === 'pinned') {
+        return Math.pow(s, 2) * Math.sin(Math.PI * s);
+      }
+      if (bottom === 'pinned' && top === 'fixed') {
+        return Math.pow(1 - s, 2) * Math.sin(Math.PI * s);
+      }
+      if (bottom === 'fixed' && top === 'free') {
+        // Cantilever-style first buckling shape for teaching:
+        // zero lateral displacement and zero slope at the fixed base,
+        // increasing curvature toward the free tip.
+        return 1 - Math.cos(0.5 * Math.PI * s);
+      }
+      return Math.sin(Math.PI * s);
+    }
+
+    function samplePoints(bottom, top, amplitude) {
+      const pts = [];
+      const n = 140;
+      for (let i = 0; i <= n; i++) {
+        const s = i / n;
+        const y = yBottom - s * (yBottom - yTop);
+        const x = centerX + amplitude * shapeValue(s, bottom, top);
+        pts.push([x, y]);
+      }
+      return pts;
+    }
+
+    function sampleCollapsePoints(loadFactor) {
+      const pts = [];
+      const n = 80;
+      const progress = clamp((loadFactor - 0.03) / 0.12, 0, 1);
+      const theta = progress * (Math.PI / 2);
+      for (let i = 0; i <= n; i++) {
+        const r = i / n;
+        const x = centerX + r * straightHeight * Math.sin(theta);
+        const y = yBottom - r * straightHeight * Math.cos(theta);
+        pts.push([x, y]);
+      }
+      return { pts, progress, theta };
+    }
+
+    function toPath(pts) {
+      return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join(' ');
+    }
+
+    function renderFixedSupport(group, x, y, position) {
+      group.innerHTML = '';
+      const ns = 'http://www.w3.org/2000/svg';
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', x - 36);
+      rect.setAttribute('y', position === 'bottom' ? y : y - 12);
+      rect.setAttribute('width', 72);
+      rect.setAttribute('height', 12);
+      rect.setAttribute('rx', 2);
+      rect.setAttribute('fill', '#334155');
+      group.appendChild(rect);
+      for (let i = 0; i < 8; i++) {
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', x - 32 + i * 8);
+        line.setAttribute('y1', position === 'bottom' ? y + 12 : y - 12);
+        line.setAttribute('x2', x - 38 + i * 8);
+        line.setAttribute('y2', position === 'bottom' ? y + 20 : y - 20);
+        line.setAttribute('stroke', '#64748b');
+        line.setAttribute('stroke-width', '2');
+        group.appendChild(line);
+      }
+    }
+
+    function renderPinnedSupport(group, x, y, position) {
+      group.innerHTML = '';
+      const ns = 'http://www.w3.org/2000/svg';
+      const poly = document.createElementNS(ns, 'polygon');
+      const py = position === 'bottom' ? y + 16 : y - 16;
+      poly.setAttribute('points', `${x - 26},${py} ${x + 26},${py} ${x},${y}`);
+      poly.setAttribute('fill', '#475569');
+      group.appendChild(poly);
+      [-12, 12].forEach(dx => {
+        const c = document.createElementNS(ns, 'circle');
+        c.setAttribute('cx', x + dx);
+        c.setAttribute('cy', position === 'bottom' ? y + 24 : y - 24);
+        c.setAttribute('r', 4);
+        c.setAttribute('fill', '#94a3b8');
+        group.appendChild(c);
+      });
+    }
+
+    function renderSupport(group, type, x, y, position) {
+      if (type === 'free') { group.innerHTML = ''; return; }
+      if (type === 'fixed') renderFixedSupport(group, x, y, position);
+      else renderPinnedSupport(group, x, y, position);
+    }
+
+    function updateFromY(clientY) {
+      const rect = svg.getBoundingClientRect();
+      const y = clientY - rect.top;
+      const t = clamp((y - minY) / (maxY - minY), 0, 1);
+      loadSlider.value = (0.02 + t * 1.23).toFixed(2);
+      render();
+    }
+
+    function render() {
+      const bottom = bottomBC.value;
+      const top = topBC.value;
+      const loadFactor = parseFloat(loadSlider.value);
+      const isMechanism = (bottom === 'pinned' && top === 'free');
+      const isUnsupported = (bottom === 'fixed' && top === 'free') ? false : false;
+      const K = K_FACTORS[`${bottom}-${top}`] || 1.0;
+      const PcrVal = isMechanism ? 0 : pcr(K);
+      const P = isMechanism ? loadFactor : loadFactor * PcrVal;
+      const ratio = isMechanism ? (loadFactor > 0.03 ? 1.2 : loadFactor / 0.03) : P / PcrVal;
+      const buckled = isMechanism ? loadFactor > 0.03 : ratio >= 1;
+
+      const pre = 5;
+      const post = 18 + 120 * Math.sqrt(Math.max(0, ratio - 1));
+      const amplitude = isMechanism ? 0 : (buckled ? post : pre);
+
+      let pts, d, collapse = null;
+      if (isMechanism) {
+        collapse = sampleCollapsePoints(loadFactor);
+        pts = collapse.pts;
+      } else {
+        pts = samplePoints(bottom, top, amplitude);
+      }
+      d = toPath(pts);
+      columnGlow.setAttribute('d', d);
+      columnPath.setAttribute('d', d);
+
+      renderSupport(topSupport, top, centerX, yTop - 6, 'top');
+      renderSupport(bottomSupport, bottom, centerX, yBottom + 6, 'bottom');
+
+      const loadArrowY = clamp(yTop + (loadFactor / 1.25) * 190, yTop + 10, yTop + 200);
+      loadArrow.setAttribute('x1', centerX + 92);
+      loadArrow.setAttribute('y1', yTop + 16);
+      loadArrow.setAttribute('x2', centerX + 92);
+      loadArrow.setAttribute('y2', loadArrowY);
+      loadLetter.setAttribute('x', centerX + 104);
+      loadLetter.setAttribute('y', loadArrowY - 8);
+      handleRect.setAttribute('x', centerX + 58);
+      handleRect.setAttribute('y', loadArrowY - 18);
+      handleText.setAttribute('x', centerX + 92);
+      handleText.setAttribute('y', loadArrowY + 6);
+
+      loadFactorLabel.textContent = `${loadFactor.toFixed(2)} × Pcr`;
+      kLabel.textContent = `K = ${K}`;
+      leLabel.innerHTML = `L<sub>e</sub> = ${(K * LENGTH).toFixed(3)} L`;
+      pLabel.textContent = isMechanism ? `Mechanism case: no finite Euler Pcr` : `P = ${P.toFixed(2)}, Pcr = ${PcrVal.toFixed(2)}`;
+      pairText.textContent = `Current pair: ${bottom}–${top}`;
+      ratioText.textContent = isMechanism ? `Small load triggers rotation` : `P / Pcr = ${ratio.toFixed(2)}`;
+      lelText.textContent = isMechanism ? `Le / L = not defined` : `Le / L = ${K.toFixed(3)}`;
+      ampText.textContent = isMechanism ? `Rotation progress = ${Math.round((collapse?.progress || 0)*100)}%` : `Mode amplitude = ${amplitude.toFixed(1)} px`;
+
+      if (isMechanism) {
+        stateBadge.textContent = loadFactor > 0.03 ? 'Mechanism / falling' : 'Unstable mechanism';
+        stateBadge.className = 'state amber';
+        const tip = pts[pts.length - 1];
+        modeDot.setAttribute('cx', tip[0]);
+        modeDot.setAttribute('cy', tip[1]);
+        modeDot.setAttribute('r', loadFactor > 0.03 ? 8 : 0);
+        modeText.setAttribute('x', Math.min(tip[0] + 14, width - 120));
+        modeText.setAttribute('y', Math.max(tip[1] - 10, 80));
+        modeText.textContent = loadFactor > 0.03 ? 'Rigid-body collapse' : '';
+      } else if (buckled) {
+        stateBadge.textContent = 'Buckled';
+        stateBadge.className = 'state amber';
+        const markerPoint = (bottom === 'fixed' && top === 'free') ? pts[pts.length - 1] : [centerX + amplitude, (yTop + yBottom) / 2];
+        modeDot.setAttribute('cx', markerPoint[0]);
+        modeDot.setAttribute('cy', markerPoint[1]);
+        modeDot.setAttribute('r', 10);
+        modeText.setAttribute('x', markerPoint[0] + 16);
+        modeText.setAttribute('y', markerPoint[1] + 5);
+        modeText.textContent = (bottom === 'fixed' && top === 'free') ? 'Free tip rotates and moves laterally' : 'Buckling mode activated';
+      } else {
+        stateBadge.textContent = 'Straight / stable';
+        stateBadge.className = 'state green';
+        modeDot.setAttribute('r', 0);
+        modeText.textContent = '';
+      }
+    }
+
+    loadSlider.addEventListener('input', render);
+    topBC.addEventListener('change', render);
+    bottomBC.addEventListener('change', render);
+    resetBtn.addEventListener('click', () => {
+      topBC.value = 'fixed';
+      bottomBC.value = 'fixed';
+      loadSlider.value = '0.16';
+      render();
+    });
+
+    dragHandle.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      handleRect.setAttribute('fill', '#0f172a');
+      dragHandle.setPointerCapture(e.pointerId);
+      updateFromY(e.clientY);
+    });
+
+    svg.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      updateFromY(e.clientY);
+    });
+
+    function endDrag() {
+      dragging = false;
+      handleRect.setAttribute('fill', '#1e293b');
+    }
+
+    svg.addEventListener('pointerup', endDrag);
+    svg.addEventListener('pointerleave', endDrag);
+    svg.addEventListener('pointercancel', endDrag);
+
+    render();
+  </script>
+</body>
+</html>
